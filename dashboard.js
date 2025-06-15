@@ -1,8 +1,8 @@
-const access = JSON.parse(sessionStorage.getItem("userAccess")) || {};
-const infoDisplay = document.getElementById("accessInfo");
-const fileArea = document.getElementById("fileArea");
+let access = JSON.parse(sessionStorage.getItem("userAccess")) || {};
+let infoDisplay = document.getElementById("accessInfo");
+let fileArea = document.getElementById("fileArea");
 
-const files = {
+let files = JSON.parse(sessionStorage.getItem("classifiedFiles")) || {
   "L3-INTSEC": "🗂️ L3 INTSEC File",
   "L3-ETHCOM": "📄 L3 ETHCOM Report",
   "L3-SITADM": "🔒 L3 SITADM Overview",
@@ -27,13 +27,74 @@ function render() {
       const box = document.createElement("div");
       box.className = "fileBox";
       box.innerHTML = `
-        <h3>${key}</h3>
-        <p>${files[key]}</p>
-        ${access.edit ? `<textarea>${files[key]}</textarea>` : ""}
+        <h3 class="collapser" onclick="toggleFile('${key}')">${key}</h3>
+        <div class="fileContent" id="file-${key}" style="display:none;">
+          ${access.edit 
+            ? `<textarea id="edit-${key}">${files[key]}</textarea>
+               <br/>
+               <button onclick="saveFile('${key}')">💾 Save</button>
+               <button onclick="deleteFile('${key}')">🗑️ Delete</button>`
+            : `<p>${files[key]}</p>`
+          }
+        </div>
       `;
       fileArea.appendChild(box);
     }
   });
+
+  if (access.edit) {
+    const creator = document.createElement("div");
+    creator.className = "fileBox";
+    creator.innerHTML = `
+      <h3>Create New File</h3>
+      <input type="text" id="newKey" placeholder="Enter new subclearance key (e.g. L3-NEW)" />
+      <textarea id="newContent" placeholder="Enter content..."></textarea>
+      <button onclick="createFile()">➕ Create File</button>
+    `;
+    fileArea.appendChild(creator);
+  }
+
+  // Save updated file state
+  sessionStorage.setItem("classifiedFiles", JSON.stringify(files));
+}
+
+function toggleFile(key) {
+  const el = document.getElementById(`file-${key}`);
+  el.style.display = (el.style.display === "none") ? "block" : "none";
+}
+
+function saveFile(key) {
+  const content = document.getElementById(`edit-${key}`).value;
+  files[key] = content;
+  sessionStorage.setItem("classifiedFiles", JSON.stringify(files));
+  render();
+}
+
+function deleteFile(key) {
+  if (confirm(`Are you sure you want to delete ${key}?`)) {
+    delete files[key];
+    sessionStorage.setItem("classifiedFiles", JSON.stringify(files));
+    render();
+  }
+}
+
+function createFile() {
+  const key = document.getElementById("newKey").value.trim();
+  const content = document.getElementById("newContent").value.trim();
+
+  if (!key || !content) {
+    alert("Key and content required.");
+    return;
+  }
+
+  if (files[key]) {
+    alert("File with this key already exists.");
+    return;
+  }
+
+  files[key] = content;
+  sessionStorage.setItem("classifiedFiles", JSON.stringify(files));
+  render();
 }
 
 render();
