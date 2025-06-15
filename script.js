@@ -2,11 +2,16 @@ const accessCodes = {
   "sK1iU#@9o3": { level: 0 },
   "G*&c*2!5fM0%": { level: 1 },
   "y#6V9g^n6l0n5&": { level: 2 },
-  "pu8Lb82gP@*U$11w": { level: 3, sub: ["L3-INTSEC", "L3-ETHCOM", "L3-SITADM"] },
-  "1V!zm@rlgsO%ZA9M&A": { level: 4, sub: ["L3-INTSEC", "L3-ETHCOM", "L3-SITADM", "L4-INTSEC", "L4-ETHCOM", "L4-SITADM"] },
-  "9l1!5MhF0g&7b6%uu$": { level: 5, sub: ["L3-INTSEC", "L3-ETHCOM", "L3-SITADM", "L4-INTSEC", "L4-ETHCOM", "L4-SITADM", "L5-INTSEC", "L5-ETHCOM", "L5-SITADM"] },
-  "ln!G91#10ArE4%%!hR8*": { level: "OVERRIDE", sub: ["L3-INTSEC", "L3-ETHCOM", "L3-SITADM", "L4-INTSEC", "L4-ETHCOM", "L4-SITADM", "L5-INTSEC", "L5-ETHCOM", "L5-SITADM"] },
-  "1g^X*v4@%J^N#gW#E5FS": { edit: true }
+  "pu8Lb82gP@*U$11w": { level: 3 },
+  "1V!zm@rlgsO%ZA9M&A": { level: 4 },
+  "9l1!5MhF0g&7b6%uu$": { level: 5 },
+  "ln!G91#10ArE4%%!hR8*": { level: "OVERRIDE" },
+  "1g^X*v4@%J^N#gW#E5FS": { edit: true },
+
+  // 🔑 Subclearance Passkeys
+  "INT-987": { sub: "INTSEC" },
+  "ETH-731": { sub: "ETHCOM" },
+  "SIT-347": { sub: "SITADM" }
 };
 
 let userAccess = JSON.parse(sessionStorage.getItem("userAccess")) || {
@@ -36,11 +41,12 @@ function verifyCode() {
 
   if (info.edit) {
     userAccess.edit = true;
+  } else if (info.sub) {
+    userAccess.sub = mergeSubAccess(userAccess.sub, [info.sub]);
   } else {
     const newLevel = getLevelVal(info.level);
     const currLevel = getLevelVal(userAccess.level);
     if (newLevel > currLevel) userAccess.level = info.level;
-    if (info.sub) userAccess.sub = mergeSubAccess(userAccess.sub, info.sub);
   }
 
   sessionStorage.setItem("userAccess", JSON.stringify(userAccess));
