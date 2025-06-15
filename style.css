@@ -50,6 +50,23 @@ button:hover {
   color: #f5a623;
 }
 
+.logoutBtn {
+  position: absolute;
+  top: 20px;
+  right: 20px;
+  background-color: #800;
+  color: white;
+  border: none;
+  padding: 10px 15px;
+  font-weight: bold;
+  cursor: pointer;
+}
+
+.logoutBtn:hover {
+  background-color: #a00;
+}
+
+
 textarea {
   width: 100%;
   height: 80px;
