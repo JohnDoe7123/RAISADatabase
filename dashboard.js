@@ -97,4 +97,12 @@ function createFile() {
   render();
 }
 
+function logout() {
+  if (confirm("Are you sure you want to log out?")) {
+    sessionStorage.clear();
+    window.location.href = "index.html";
+  }
+}
+
+
 render();
