@@ -58,3 +58,18 @@ textarea {
   border: 1px solid #f5a623;
   margin-top: 10px;
 }
+
+.collapser {
+  cursor: pointer;
+  text-decoration: underline;
+}
+
+.fileContent {
+  margin-top: 10px;
+}
+
+.fileBox input[type="text"] {
+  width: 60%;
+  padding: 8px;
+  margin-bottom: 10px;
+}
