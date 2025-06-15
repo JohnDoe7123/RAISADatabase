@@ -20,13 +20,14 @@ function mergeSubAccess(existing, incoming) {
 }
 
 function getLevelVal(level) {
-  return level === "OVERRIDE" ? 6 : parseInt(level);
+  return level === "OVERRIDE" ? 6 : parseInt(level, 10);
 }
 
 function verifyCode() {
   const code = document.getElementById("accessCode").value.trim();
   const info = accessCodes[code];
   const feedback = document.getElementById("feedback");
+  document.getElementById("accessCode").value = "";
 
   if (!info) {
     feedback.textContent = "❌ Invalid code.";
@@ -43,6 +44,11 @@ function verifyCode() {
   }
 
   sessionStorage.setItem("userAccess", JSON.stringify(userAccess));
-  feedback.textContent = "✅ Access granted. Redirecting...";
-  setTimeout(() => window.location.href = "dashboard.html", 1000);
+  feedback.textContent = "✅ Access updated.";
+
+  if (!location.href.includes("dashboard.html")) {
+    setTimeout(() => window.location.href = "dashboard.html", 500);
+  } else {
+    setTimeout(() => location.reload(), 300);
+  }
 }
