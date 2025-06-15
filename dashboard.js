@@ -1,18 +1,38 @@
-let access = JSON.parse(sessionStorage.getItem("userAccess")) || {};
-let infoDisplay = document.getElementById("accessInfo");
-let fileArea = document.getElementById("fileArea");
-
-let files = JSON.parse(sessionStorage.getItem("classifiedFiles")) || {
-  "L3-INTSEC": "🗂️ L3 INTSEC File",
-  "L3-ETHCOM": "📄 L3 ETHCOM Report",
-  "L3-SITADM": "🔒 L3 SITADM Overview",
-  "L4-INTSEC": "📁 L4 INTSEC Archives",
-  "L4-ETHCOM": "📋 L4 ETHCOM Directives",
-  "L4-SITADM": "📌 L4 SITADM Control Sheet",
-  "L5-INTSEC": "📂 L5 INTSEC Threat Matrix",
-  "L5-ETHCOM": "📝 L5 ETHCOM Protocol",
-  "L5-SITADM": "🔒 L5 SITADM Blackfile"
+let access = JSON.parse(sessionStorage.getItem("userAccess")) || {
+  level: null,
+  sub: [],
+  edit: false
 };
+
+let files = JSON.parse(sessionStorage.getItem("classifiedFiles")) || [
+  {
+    title: "INTSEC Protocol Alpha",
+    content: "Sensitive internal security briefing.",
+    minClearance: 3,
+    subclearances: ["INTSEC"]
+  },
+  {
+    title: "Ethics Panel Transcript",
+    content: "Notes from the L4 ETHCOM tribunal.",
+    minClearance: 4,
+    subclearances: ["ETHCOM"]
+  },
+  {
+    title: "General Level 2 Notice",
+    content: "No subclearance needed here.",
+    minClearance: 2,
+    subclearances: []
+  }
+];
+
+const fileArea = document.getElementById("fileArea");
+const infoDisplay = document.getElementById("accessInfo");
+
+function hasAccess(file) {
+  const levelOK = access.level === "OVERRIDE" || parseInt(access.level) >= file.minClearance;
+  const subsOK = file.subclearances.length === 0 || file.subclearances.every(s => access.sub.includes(s));
+  return levelOK && subsOK;
+}
 
 function render() {
   infoDisplay.innerHTML = `
@@ -20,21 +40,25 @@ function render() {
     <strong>Subclearances:</strong> ${access.sub?.join(", ") || "None"}<br/>
     <strong>Edit Mode:</strong> ${access.edit ? "✅" : "❌"}
   `;
+
   fileArea.innerHTML = "";
 
-  access.sub?.forEach(key => {
-    if (files[key]) {
+  files.forEach((file, i) => {
+    if (hasAccess(file)) {
       const box = document.createElement("div");
       box.className = "fileBox";
       box.innerHTML = `
-        <h3 class="collapser" onclick="toggleFile('${key}')">${key}</h3>
-        <div class="fileContent" id="file-${key}" style="display:none;">
+        <h3 class="collapser" onclick="toggleFile(${i})">${file.title}</h3>
+        <div class="fileContent" id="file-${i}" style="display:none;">
           ${access.edit 
-            ? `<textarea id="edit-${key}">${files[key]}</textarea>
+            ? `<textarea id="edit-${i}">${file.content}</textarea>
                <br/>
-               <button onclick="saveFile('${key}')">💾 Save</button>
-               <button onclick="deleteFile('${key}')">🗑️ Delete</button>`
-            : `<p>${files[key]}</p>`
+               ${clearanceDropdown(`min-${i}`, file.minClearance)}
+               ${subclearanceMulti(`subs-${i}`, file.subclearances)}
+               <br/>
+               <button onclick="saveFile(${i})">💾 Save</button>
+               <button onclick="deleteFile(${i})">🗑️ Delete</button>`
+            : `<p>${file.content}</p>`
           }
         </div>
       `;
@@ -47,8 +71,10 @@ function render() {
     creator.className = "fileBox";
     creator.innerHTML = `
       <h3>Create New File</h3>
-      <input type="text" id="newKey" placeholder="Enter new subclearance key (e.g. L3-NEW)" />
-      <textarea id="newContent" placeholder="Enter content..."></textarea>
+      <input type="text" id="newTitle" placeholder="Title" />
+      <textarea id="newContent" placeholder="File content..."></textarea>
+      ${clearanceDropdown("newMin")}
+      ${subclearanceMulti("newSubs")}
       <button onclick="createFile()">➕ Create File</button>
     `;
     fileArea.appendChild(creator);
@@ -57,47 +83,75 @@ function render() {
   sessionStorage.setItem("classifiedFiles", JSON.stringify(files));
 }
 
-function toggleFile(key) {
-  const el = document.getElementById(`file-${key}`);
-  el.style.display = (el.style.display === "none") ? "block" : "none";
+function clearanceDropdown(id, selected = 0) {
+  const levels = [0, 1, 2, 3, 4, 5, "OVERRIDE"];
+  return `
+    <label>Clearance Level:
+      <select id="${id}">
+        ${levels.map(level => 
+          `<option value="${level}" ${level == selected ? "selected" : ""}>Level ${level}</option>`
+        ).join("")}
+      </select>
+    </label>
+  `;
 }
 
-function saveFile(key) {
-  const content = document.getElementById(`edit-${key}`).value;
-  files[key] = content;
+function subclearanceMulti(id, selected = []) {
+  const subclearances = ["INTSEC", "ETHCOM", "SITADM"];
+  return `
+    <label>Subclearances:<br/>
+      <select id="${id}" multiple size="3">
+        ${subclearances.map(sub => 
+          `<option value="${sub}" ${selected.includes(sub) ? "selected" : ""}>${sub}</option>`
+        ).join("")}
+      </select>
+    </label>
+  `;
+}
+
+function toggleFile(i) {
+  const el = document.getElementById(`file-${i}`);
+  el.style.display = el.style.display === "none" ? "block" : "none";
+}
+
+function saveFile(i) {
+  const content = document.getElementById(`edit-${i}`).value;
+  const min = document.getElementById(`min-${i}`).value;
+  const subs = Array.from(document.getElementById(`subs-${i}`).selectedOptions).map(o => o.value);
+
+  files[i].content = content;
+  files[i].minClearance = min;
+  files[i].subclearances = subs;
   sessionStorage.setItem("classifiedFiles", JSON.stringify(files));
   render();
 }
 
-function deleteFile(key) {
-  if (confirm(`Are you sure you want to delete ${key}?`)) {
-    delete files[key];
+function deleteFile(i) {
+  if (confirm("Delete this file?")) {
+    files.splice(i, 1);
     sessionStorage.setItem("classifiedFiles", JSON.stringify(files));
     render();
   }
 }
 
 function createFile() {
-  const key = document.getElementById("newKey").value.trim();
+  const title = document.getElementById("newTitle").value.trim();
   const content = document.getElementById("newContent").value.trim();
+  const min = document.getElementById("newMin").value;
+  const subs = Array.from(document.getElementById("newSubs").selectedOptions).map(o => o.value);
 
-  if (!key || !content) {
-    alert("Key and content required.");
+  if (!title || !content) {
+    alert("All fields required.");
     return;
   }
 
-  if (files[key]) {
-    alert("File with this key already exists.");
-    return;
-  }
-
-  files[key] = content;
+  files.push({ title, content, minClearance: min, subclearances: subs });
   sessionStorage.setItem("classifiedFiles", JSON.stringify(files));
   render();
 }
 
 function logout() {
-  if (confirm("Are you sure you want to log out?")) {
+  if (confirm("Log out?")) {
     sessionStorage.clear();
     window.location.href = "index.html";
   }
