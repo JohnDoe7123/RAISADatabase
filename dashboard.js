@@ -56,7 +56,7 @@ const pendingCode = sessionStorage.getItem("pendingCode");
 if (pendingCode) {
   document.getElementById("accessCode").value = pendingCode;
   sessionStorage.removeItem("pendingCode");
-  verifyCode();
+  
 }
 
 renderFiles();
