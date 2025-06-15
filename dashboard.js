@@ -54,7 +54,6 @@ function render() {
     fileArea.appendChild(creator);
   }
 
-  // Save updated file state
   sessionStorage.setItem("classifiedFiles", JSON.stringify(files));
 }
 
@@ -103,6 +102,5 @@ function logout() {
     window.location.href = "index.html";
   }
 }
-
 
 render();
