@@ -1,34 +1,31 @@
 console.log("Loaded access:", access);
 
-async function pushToGitHub(filename, content) {
-  const token = 'YOUR_PERSONAL_ACCESS_TOKEN'; // secure this!
-  const repo = 'your-repo';
-  const owner = 'your-username';
-  const path = `files/${filename}`;
-  const branch = 'main';
-  const message = `Add or update file ${filename}`;
 
-  const base64Content = btoa(unescape(encodeURIComponent(content)));
 
-  const res = await fetch(`https://api.github.com/repos/${owner}/${repo}/contents/${path}`, {
+
+async function saveFileToStaging(fileObj, filename) {
+  const fileData = JSON.stringify(fileObj, null, 2);
+  const path = `staging/${filename}`;
+
+  const response = await fetch(`https://api.github.com/repos/JohnDoe7123/RAISADatabase/contents/${path}`, {
     method: 'PUT',
     headers: {
-      'Authorization': `Bearer ${token}`,
-      'Content-Type': 'application/json'
+      Authorization: `Bearer ${{ secrets.SECRET_TOKEN }}`,  // passed only by GitHub Actions!
+      Accept: 'application/vnd.github.v3+json'
     },
     body: JSON.stringify({
-      message,
-      content: base64Content,
-      branch
+      message: `Stage file ${filename}`,
+      content: btoa(unescape(encodeURIComponent(fileData))),
+      branch: 'main'
     })
   });
 
-  const result = await res.json();
-  if (res.status === 201 || res.status === 200) {
-    alert("File successfully saved to GitHub");
+  const result = await response.json();
+  if (response.ok) {
+    alert("✅ File staged! Trigger GitHub Action to publish.");
   } else {
-    console.error("GitHub API Error:", result);
-    alert("Error saving file.");
+    console.error(result);
+    alert("❌ Failed to stage file.");
   }
 }
 
