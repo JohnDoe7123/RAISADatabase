@@ -1,3 +1,6 @@
+console.log("Loaded access:", access);
+
+
 let access = JSON.parse(sessionStorage.getItem("userAccess")) || {
   level: null,
   sub: [],
