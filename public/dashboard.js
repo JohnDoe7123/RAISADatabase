@@ -26,6 +26,14 @@ function render() {
     <strong>Subclearances:</strong> ${access.sub?.join(", ") || "None"}<br/>
     <strong>Edit Mode:</strong> ${access.edit ? "✅" : "❌"}
   `;
+  const editBanner = document.getElementById("editModeBanner");
+if (access.edit) {
+  editBanner.style.display = "block";
+  editBanner.innerHTML = "✏️ EDIT MODE ENABLED — You can now create, modify, and delete files";
+} else {
+  editBanner.style.display = "none";
+}
+
   fileArea.innerHTML = "";
 
   files.forEach((file, i) => {
