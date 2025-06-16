@@ -1,0 +1,29 @@
+name: Commit Uploaded Files
+
+on:
+  workflow_dispatch:
+  push:
+    paths:
+      - 'staging/**'     # Where your frontend saves uncommitted files
+
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v3
+        with:
+          token: ${{ secrets.GH_PUSH_TOKEN }}
+
+      - name: Move staged files to /files
+        run: |
+          mkdir -p files
+          mv staging/*.json files/ || echo "No staged files"
+
+      - name: Commit and push
+        run: |
+          git config user.name "Classified Bot"
+          git config user.email "bot@classified.com"
+          git add files/
+          git commit -m "📁 Publish new classified file(s)" || echo "Nothing to commit"
+          git push
