@@ -52,9 +52,10 @@ function verifyCode() {
   sessionStorage.setItem("userAccess", JSON.stringify(userAccess));
   feedback.textContent = "✅ Access updated.";
 
-  if (!location.href.includes("dashboard.html")) {
-    setTimeout(() => window.location.href = "dashboard.html", 500);
-  } else {
+  // 👇 Reload dashboard to show edit UI
+  if (location.href.includes("dashboard.html")) {
     setTimeout(() => location.reload(), 300);
+  } else {
+    setTimeout(() => window.location.href = "dashboard.html", 500);
   }
 }
