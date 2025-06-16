@@ -144,10 +144,6 @@ async function pushToGitHub(filename, fileObj) {
 
   const res = await fetch(`https://api.github.com/repos/${GITHUB_USER}/${REPO}/contents/${path}`, {
     method: "PUT",
-    headers: {
-      "Authorization": `Bearer ${access.githubToken || "NO_TOKEN"}`, // DO NOT use this in public repo, just placeholder
-      "Content-Type": "application/json"
-    },
     body: JSON.stringify({
       message: `Stage file ${filename}`,
       content: contentBase64,
