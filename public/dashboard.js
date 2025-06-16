@@ -1,65 +1,18 @@
-console.log("Loaded access:", access);
-
-
-
-
-async function saveFileToStaging(fileObj, filename) {
-  const fileData = JSON.stringify(fileObj, null, 2);
-  const path = `staging/${filename}`;
-
-  const response = await fetch(`https://api.github.com/repos/JohnDoe7123/RAISADatabase/contents/${path}`, {
-    method: 'PUT',
-    headers: {
-      Authorization: `Bearer ${{ secrets.SECRET_TOKEN }}`,  // passed only by GitHub Actions!
-      Accept: 'application/vnd.github.v3+json'
-    },
-    body: JSON.stringify({
-      message: `Stage file ${filename}`,
-      content: btoa(unescape(encodeURIComponent(fileData))),
-      branch: 'main'
-    })
-  });
-
-  const result = await response.json();
-  if (response.ok) {
-    alert("✅ File staged! Trigger GitHub Action to publish.");
-  } else {
-    console.error(result);
-    alert("❌ Failed to stage file.");
-  }
-}
-
-
-
+// Load session data
 let access = JSON.parse(sessionStorage.getItem("userAccess")) || {
   level: null,
   sub: [],
   edit: false
 };
 
-let files = JSON.parse(sessionStorage.getItem("classifiedFiles")) || [
-  {
-    title: "INTSEC Protocol Alpha",
-    content: "Sensitive internal security briefing.",
-    minClearance: 3,
-    subclearances: ["INTSEC"]
-  },
-  {
-    title: "Ethics Panel Transcript",
-    content: "Notes from the L4 ETHCOM tribunal.",
-    minClearance: 4,
-    subclearances: ["ETHCOM"]
-  },
-  {
-    title: "General Level 2 Notice",
-    content: "No subclearance needed here.",
-    minClearance: 2,
-    subclearances: []
-  }
-];
+let files = []; // Loaded from GitHub
 
 const fileArea = document.getElementById("fileArea");
 const infoDisplay = document.getElementById("accessInfo");
+
+const GITHUB_USER = "JohnDoe7123";
+const REPO = "RAISADatabase";
+const BRANCH = "main";
 
 function hasAccess(file) {
   const levelOK = access.level === "OVERRIDE" || parseInt(access.level) >= file.minClearance;
@@ -73,7 +26,6 @@ function render() {
     <strong>Subclearances:</strong> ${access.sub?.join(", ") || "None"}<br/>
     <strong>Edit Mode:</strong> ${access.edit ? "✅" : "❌"}
   `;
-
   fileArea.innerHTML = "";
 
   files.forEach((file, i) => {
@@ -89,8 +41,7 @@ function render() {
                ${clearanceDropdown(`min-${i}`, file.minClearance)}
                ${subclearanceMulti(`subs-${i}`, file.subclearances)}
                <br/>
-               <button onclick="saveFile(${i})">💾 Save</button>
-               <button onclick="deleteFile(${i})">🗑️ Delete</button>`
+               <button onclick="stageFile(${i})">🚀 Stage File to GitHub</button>`
             : `<p>${file.content}</p>`
           }
         </div>
@@ -108,12 +59,10 @@ function render() {
       <textarea id="newContent" placeholder="File content..."></textarea>
       ${clearanceDropdown("newMin")}
       ${subclearanceMulti("newSubs")}
-      <button onclick="createFile()">➕ Create File</button>
+      <button onclick="createFile()">➕ Stage New File</button>
     `;
     fileArea.appendChild(creator);
   }
-
-  sessionStorage.setItem("classifiedFiles", JSON.stringify(files));
 }
 
 function clearanceDropdown(id, selected = 0) {
@@ -147,26 +96,7 @@ function toggleFile(i) {
   el.style.display = el.style.display === "none" ? "block" : "none";
 }
 
-function saveFile(i) {
-  const content = document.getElementById(`edit-${i}`).value;
-  const min = document.getElementById(`min-${i}`).value;
-  const subs = Array.from(document.getElementById(`subs-${i}`).selectedOptions).map(o => o.value);
-
-  files[i].content = content;
-  files[i].minClearance = min;
-  files[i].subclearances = subs;
-  sessionStorage.setItem("classifiedFiles", JSON.stringify(files));
-  render();
-}
-
-function deleteFile(i) {
-  if (confirm("Delete this file?")) {
-    files.splice(i, 1);
-    sessionStorage.setItem("classifiedFiles", JSON.stringify(files));
-    render();
-  }
-}
-
+// Create new file object and push to GitHub staging
 function createFile() {
   const title = document.getElementById("newTitle").value.trim();
   const content = document.getElementById("newContent").value.trim();
@@ -178,16 +108,86 @@ function createFile() {
     return;
   }
 
-  files.push({ title, content, minClearance: min, subclearances: subs });
-  sessionStorage.setItem("classifiedFiles", JSON.stringify(files));
-  render();
+  const fileObj = {
+    title,
+    content,
+    minClearance: min,
+    subclearances: subs
+  };
+
+  const filename = `${title.replace(/\s+/g, '_')}.json`;
+  pushToGitHub(filename, fileObj);
 }
 
+// Save file edits to staging
+function stageFile(i) {
+  const file = files[i];
+  const content = document.getElementById(`edit-${i}`).value;
+  const min = document.getElementById(`min-${i}`).value;
+  const subs = Array.from(document.getElementById(`subs-${i}`).selectedOptions).map(o => o.value);
+
+  const fileObj = {
+    title: file.title,
+    content,
+    minClearance: min,
+    subclearances: subs
+  };
+
+  const filename = `${file.title.replace(/\s+/g, '_')}.json`;
+  pushToGitHub(filename, fileObj);
+}
+
+// Push to GitHub staging folder
+async function pushToGitHub(filename, fileObj) {
+  const path = `staging/${filename}`;
+  const contentBase64 = btoa(unescape(encodeURIComponent(JSON.stringify(fileObj, null, 2))));
+
+  const res = await fetch(`https://api.github.com/repos/${GITHUB_USER}/${REPO}/contents/${path}`, {
+    method: "PUT",
+    headers: {
+      "Authorization": `Bearer ${access.githubToken || "NO_TOKEN"}`, // DO NOT use this in public repo, just placeholder
+      "Content-Type": "application/json"
+    },
+    body: JSON.stringify({
+      message: `Stage file ${filename}`,
+      content: contentBase64,
+      branch: BRANCH
+    })
+  });
+
+  const result = await res.json();
+  if (res.status === 201 || res.status === 200) {
+    alert("✅ File staged! It will be published by GitHub Action.");
+  } else {
+    console.error(result);
+    alert("❌ Failed to push file to GitHub staging.");
+  }
+}
+
+// Logout
 function logout() {
   if (confirm("Log out?")) {
     sessionStorage.clear();
     window.location.href = "index.html";
   }
+}
+
+// Load published files from /files folder on GitHub
+async function loadFilesFromRepo() {
+  const res = await fetch(`https://raw.githubusercontent.com/${GITHUB_USER}/${REPO}/${BRANCH}/files/`);
+  const list = await fetch(`https://api.github.com/repos/${GITHUB_USER}/${REPO}/contents/files`);
+  const json = await list.json();
+
+  const filePromises = json
+    .filter(file => file.name.endsWith(".json"))
+    .map(file => fetch(file.download_url).then(r => r.json()));
+
+  files = await Promise.all(filePromises);
+  render();
+}
+
+loadFilesFromRepo();
+
 }
 
 render();
