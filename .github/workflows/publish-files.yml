@@ -1,10 +1,10 @@
-name: Commit Uploaded Files
+name: Auto-Publish Staged Files
 
 on:
   workflow_dispatch:
   push:
     paths:
-      - 'staging/**'     # Where your frontend saves uncommitted files
+      - 'staging/**'
 
 jobs:
   publish:
@@ -13,17 +13,23 @@ jobs:
     steps:
       - uses: actions/checkout@v3
         with:
-          token: ${{ secrets.GH_PUSH_TOKEN }}
+          token: ${{ secrets.SECRET_TOKEN }}
 
-      - name: Move staged files to /files
-        run: |
-          mkdir -p files
-          mv staging/*.json files/ || echo "No staged files"
+      - name: Prepare folders
+        run: mkdir -p files
 
-      - name: Commit and push
+      - name: Move staged files to files folder
         run: |
-          git config user.name "Classified Bot"
-          git config user.email "bot@classified.com"
+          if compgen -G "staging/*.json" > /dev/null; then
+            mv staging/*.json files/
+          else
+            echo "No files to publish."
+          fi
+
+      - name: Commit & Push new files
+        run: |
+          git config user.name "ClassifiedBot"
+          git config user.email "classified-bot@example.com"
           git add files/
-          git commit -m "📁 Publish new classified file(s)" || echo "Nothing to commit"
+          git commit -m "📁 Auto-publish new file(s)" || echo "Nothing to commit"
           git push
